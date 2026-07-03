@@ -1,0 +1,842 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <cstdlib>
+
+using namespace std;
+
+fstream fin;
+
+template <class T>
+struct my_bracket
+{
+    string open;
+    int element;
+    bool op;
+    my_bracket* bracket;
+};
+
+template <class T>
+void show_vector(vector<T> v)
+{
+    int i = 0;
+    while (i < v.size())
+    {
+        cout << " " << v[i];
+        i = i + 1;
+    }
+    cout << endl;
+}
+
+template <class T>
+bool operation(T str)
+{
+    if (str == "+" || str == "/" || str == "*" || str == "-") return true;
+    else return false;
+}
+
+template <class T>
+bool open_bracket(T str)  // проверяет открывающие скобки
+{
+    if (str == "(" || str == "[" || str == "{") return true;
+    else return false;
+}
+
+template <class T>
+bool close_bracket(T str)  // проверяет закрывающие скобки
+{
+    if (str == ")" || str == "]" || str == "}") return true;
+    else return false;
+}
+
+template <class T>
+int priority(T info)
+{
+    if (info == ")" || info == "(") return 1;
+    else if (info == "]" || info == "[") return 2;
+    else if (info == "}" || info == "{") return 3;
+    else return 0;
+}
+
+template <class T>
+int bracket_type(T str)
+{
+    if (str == "+" || str == "-") return 2;
+    else if (str == "*" || str == "/") return 3;
+    else return 1;
+}
+
+bool operand(char ch)
+{
+    char op[10] = { '+','-','*','/','(',')','[',']','{','}' };
+    short k = 0;
+    bool oper = false;
+
+    while (k < 10)
+    {
+        if (op[k] == ch) oper = true;
+        k = k + 1;
+    }
+
+    return oper;
+}
+
+bool separator(char ch)
+{
+    if (ch == ' ' || ch == '\n' || ch == '\0') return true;
+    else return false;
+}
+
+vector<string> vvod_file(string filename)
+{
+    vector<string> expression;
+    char ch[20];
+    char temp;
+    short k;
+    string str;
+
+    fin.open(filename);
+
+    if (fin.is_open())
+    {
+        k = 0;
+
+        while (!fin.eof() && ch[k] != ';')
+        {
+            fin.get(ch[k]);
+
+            if (!fin.eof() && ch[k] != ';')
+            {
+                if (operand(ch[k]))
+                {
+                    ch[k + 1] = 0;
+                    expression.push_back(ch);
+                    ch[k] = 0;
+                    k = 0;
+                }
+                else if (separator(ch[k])) k = 0;
+                else
+                {
+                    while (!operand(ch[k]) && !separator(ch[k]) && !fin.eof() && ch[k] != ';')
+                    {
+                        k = k + 1;
+                        fin.get(ch[k]);
+
+                        if (operand(ch[k]))
+                        {
+                            temp = ch[k];
+                            ch[k] = 0;
+                            expression.push_back(ch);
+                            ch[0] = temp;
+                            ch[1] = 0;
+                            expression.push_back(ch);
+                            k = 0;
+                        }
+                        else if (separator(ch[k]))
+                        {
+                            ch[k] = 0;
+                            expression.push_back(ch);
+                            k = 0;
+                            ch[0] = 0;
+                        }
+                        else if (fin.eof() || ch[k] == ';')
+                        {
+                            ch[k] = 0;
+                            expression.push_back(ch);
+                            k = 0;
+                            ch[k] = ';';
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else cout << "Error!File not opened" << endl;
+
+    fin.close();
+    return expression;
+}
+
+template <class T>
+int errors(short type, vector<T> expression_copy, vector<T> expression)
+{
+    T info, infoA;
+    short fix;
+    short otvet;
+
+    fix = -1;
+
+    if (type == 1)
+    {
+        // * ili / v unarnom vide
+        otvet = 0;
+        info = expression_copy.at(expression_copy.size() - 1);
+        expression_copy.pop_back();
+
+        show_vector(expression_copy);
+        cout << "! " << info << " !";
+        show_vector(expression);
+        cout << endl;
+
+        cout << "Ошибка! Унарный оператор " << info << ". Так быть не должно" << endl;
+        cout << "Хотите его просто убрать или переписать выражение полностью?" << endl;
+        cout << "1. Убрать " << info << endl;
+        cout << "2. Переписать" << endl;
+
+        while (otvet != 1 && otvet != 2) cin >> otvet;
+
+        if (otvet == 1)
+        {
+            fix = 1;
+            expression_copy.push_back(info);
+        }
+        else fix = -1;
+    }
+    else if (type == 7)
+    {
+        otvet = 0;
+        info = expression_copy.at(expression_copy.size() - 1);
+        expression_copy.pop_back();
+
+        show_vector(expression_copy);
+        cout << "! " << info << " !";
+        if (!expression.empty()) show_vector(expression);
+        cout << endl;
+
+        cout << "Ошибка! Не хватает оператора перед " << info << ". Так быть не должно" << endl;
+        cout << "Хотите его добавить или переписать выражение полностью?" << endl;
+        cout << "1. Вставить знак операции на выбор " << endl;
+        cout << "2. Переписать" << endl;
+
+        while (otvet != 1 && otvet != 2) cin >> otvet;
+
+        if (otvet == 1)
+        {
+            cout << "1. Вставить знак +" << endl;
+            cout << "2. Вставить знак -" << endl;
+            cout << "3. Вставить знак *" << endl;
+            cout << "4. Вставить знак /" << endl;
+
+            cin >> otvet;
+
+            while (otvet != 1 && otvet != 2 && otvet != 3 && otvet != 4) cin >> otvet;
+
+            if (otvet == 1) fix = 71;
+            else if (otvet == 2) fix = 72;
+            else if (otvet == 3) fix = 73;
+            else if (otvet == 4) fix = 74;
+        }
+        else fix = -1;
+    }
+    else if (type == 3)
+    {
+        otvet = 0;
+
+        show_vector(expression_copy);
+        if (!expression.empty()) show_vector(expression);
+        cout << endl;
+
+        cout << "Ошибка! Лишние открывающие скобки. Так быть не должно" << endl;
+        cout << "Хотите их просто убрать или переписать выражение полностью?" << endl;
+        cout << "1. Убрать скобки " << endl;
+        cout << "2. Переписать" << endl;
+
+        while (otvet != 1 && otvet != 2) cin >> otvet;
+
+        if (otvet == 1) fix = 3;
+        else fix = -1;
+    }
+    else if (type == 4)
+    {
+        otvet = 0;
+        info = expression_copy.at(expression_copy.size() - 1);
+        expression_copy.pop_back();
+
+        show_vector(expression_copy);
+        cout << "! " << info << " !";
+        show_vector(expression);
+        cout << endl;
+
+        cout << "Ошибка! Закрывающая скобка " << info << " без открывающей. Так быть не должно" << endl;
+        cout << "Хотите ее просто убрать или переписать выражение полностью?" << endl;
+        cout << "1. Убрать " << info << endl;
+        cout << "2. Переписать" << endl;
+
+        while (otvet != 1 && otvet != 2) cin >> otvet;
+
+        if (otvet == 1)
+        {
+            fix = 4;
+            expression_copy.push_back(info);
+        }
+        else fix = -1;
+    }
+    else if (type == 2)
+    {
+        // dva operatora
+        otvet = 0;
+        infoA = expression_copy.at(expression_copy.size() - 1);
+        expression_copy.pop_back();
+        info = expression_copy.at(expression_copy.size() - 1);
+        expression_copy.pop_back();
+
+        show_vector(expression_copy);
+        cout << " !" << info << "!" << infoA << "! ";
+        show_vector(expression);
+        cout << endl;
+
+        cout << "Ошибка! Два оператора подряд " << info << " " << infoA << ". Так быть не должно" << endl;
+        cout << "Хотите просто убрать один из них или переписать выражение полностью?" << endl;
+        cout << "1. Убрать первый оператор " << info << endl;
+        cout << "2. Убрать второй оператор " << infoA << endl;
+        cout << "3. Переписать" << endl;
+
+        while (otvet != 1 && otvet != 2 && otvet != 3) cin >> otvet;
+
+        if (otvet == 1)
+        {
+            expression_copy.push_back(infoA);
+            fix = 21;
+        }
+        else if (otvet == 2)
+        {
+            expression_copy.push_back(info);
+            fix = 22;
+        }
+        else fix = -1;
+    }
+    else if (type == 5)
+    {
+        otvet = 0;
+        infoA = expression_copy.at(expression_copy.size() - 1);
+        expression_copy.pop_back();
+        info = expression_copy.at(expression_copy.size() - 1);
+        expression_copy.pop_back();
+
+        show_vector(expression_copy);
+        cout << " !" << info << "!" << infoA << "! ";
+        show_vector(expression);
+        cout << endl;
+
+        cout << "Ошибка! Пустые скобки " << info << " " << infoA << ". Так быть не должно" << endl;
+        cout << "Хотите просто убрать их или переписать выражение полностью?" << endl;
+        cout << "1. Убрать скобки " << info << " " << infoA << endl;
+        cout << "2. Переписать" << endl;
+
+        while (otvet != 1 && otvet != 2) cin >> otvet;
+
+        if (otvet == 1) fix = 5;
+        else if (otvet == 2) fix = -1;
+    }
+    else if (type == 6)
+    {
+        otvet = 0;
+        infoA = expression_copy.at(expression_copy.size() - 1);
+        expression_copy.pop_back();
+        info = expression_copy.at(expression_copy.size() - 1);
+        expression_copy.pop_back();
+
+        show_vector(expression_copy);
+        cout << " !" << info << "!" << infoA << "! ";
+        show_vector(expression);
+        cout << endl;
+
+        cout << "Ошибка! Лишний оператор " << info << ". Так быть не должно" << endl;
+        cout << "Хотите просто убрать его или переписать выражение полностью?" << endl;
+        cout << "1. Убрать " << info << endl;
+        cout << "2. Переписать" << endl;
+
+        while (otvet != 1 && otvet != 2) cin >> otvet;
+
+        if (otvet == 1)
+        {
+            fix = 6;
+            expression_copy.push_back(infoA);
+        }
+        else fix = -1;
+    }
+    else if (type == 8)
+    {
+        otvet = 0;
+        infoA = expression_copy.at(expression_copy.size() - 1);
+        expression_copy.pop_back();
+        info = expression_copy.at(expression_copy.size() - 1);
+        expression_copy.pop_back();
+
+        show_vector(expression_copy);
+        cout << " !" << info << "!" << infoA;
+        if (!expression.empty()) show_vector(expression);
+        cout << endl;
+
+        cout << "Ошибка! Лишний оператор " << info << ". Так быть не должно" << endl;
+        cout << "Хотите просто убрать его или переписать выражение полностью?" << endl;
+        cout << "1. Убрать " << info << endl;
+        cout << "2. Переписать" << endl;
+
+        while (otvet != 1 && otvet != 2) cin >> otvet;
+
+        if (otvet == 1)
+        {
+            fix = 8;
+            expression_copy.push_back(infoA);
+        }
+        else fix = -1;
+    }
+
+    return fix;
+}
+
+template<class T>
+vector<T> convert_to_rpn(vector<T> expression, int zamena)
+{
+    vector<T> expression_copy;
+    vector<T> rpn_expression;
+    vector<T> stck;
+
+    my_bracket<T>* brackets_head;
+    my_bracket<T>* brackets_temp;
+    my_bracket<T>* cur_bracket;
+    my_bracket<T>* del_bracket;
+
+    T info, temp;
+    short type_prev;
+    short error;
+
+    brackets_head = new my_bracket<T>;
+    brackets_head->open = "#";
+    brackets_head->bracket = NULL;
+    brackets_head->element = -1;
+    cur_bracket = brackets_head;
+    cur_bracket->op = false;
+    error = 0;
+
+    type_prev = 0;
+
+    while (!expression.empty() && error >= 0)
+    {
+        error = 0;
+        info = expression[0];
+        expression.erase(expression.begin());
+        expression_copy.push_back(info);
+
+        if (open_bracket(info))
+        {
+            if (type_prev == 0 || type_prev == 3 || type_prev == 2)
+            {
+                if (cur_bracket->op) cur_bracket->op = false;
+
+                if (cur_bracket->open == "#")
+                {
+                    cur_bracket->open = info;
+                    stck.push_back(info);
+                }
+                else
+                {
+                    brackets_temp = new my_bracket<T>;
+                    cur_bracket->bracket = brackets_temp;
+                    brackets_temp->open = info;
+                    brackets_temp->bracket = NULL;
+                    brackets_temp->element = expression_copy.size();
+                    cur_bracket = brackets_temp;
+                    cur_bracket->op = false;
+
+                    stck.push_back(info);
+                }
+
+                type_prev = 3;
+            }
+            else
+            {
+                if (zamena == 0) error = errors(7, expression_copy, expression);
+
+                if (error == 71 || zamena != 0)
+                {
+                    stck.push_back("+");
+                    expression_copy.push_back("+");
+                    expression_copy.push_back(info);
+                }
+                else if (error == 72)
+                {
+                    stck.push_back("-");
+                    expression_copy.push_back("-");
+                    expression_copy.push_back(info);
+                }
+                else if (error == 73)
+                {
+                    stck.push_back("*");
+                    expression_copy.push_back("*");
+                    expression_copy.push_back(info);
+                }
+                else if (error == 74)
+                {
+                    stck.push_back("/");
+                    expression_copy.push_back("/");
+                    expression_copy.push_back(info);
+                }
+
+                if (cur_bracket->open == "#")
+                {
+                    cur_bracket->open = info;
+                    stck.push_back(info);
+                }
+                else
+                {
+                    brackets_temp = new my_bracket<T>;
+                    cur_bracket->bracket = brackets_temp;
+                    brackets_temp->open = info;
+                    brackets_temp->bracket = NULL;
+                    brackets_temp->element = expression_copy.size();
+                    cur_bracket = brackets_temp;
+                    cur_bracket->op = false;
+
+                    stck.push_back(info);
+                }
+                type_prev = 3;
+            }
+        }
+        else if (operation(info))
+        {
+            if (type_prev == 0 || type_prev == 3)
+            {
+                if (info == "-")
+                {
+                    rpn_expression.push_back("0");
+                    stck.push_back(info);
+                    type_prev = 2;
+                }
+                else if (info == "+")
+                {
+                    type_prev = 2;
+                }
+                else
+                {
+                    if (zamena == 0) error = errors(1, expression_copy, expression);
+
+                    if (error == 1 || zamena != 0)
+                    {
+                        expression_copy.pop_back();
+                    }
+                }
+
+                if (cur_bracket->open != "#")
+                {
+                    cur_bracket->op = true;
+                }
+            }
+            else if (type_prev == 2)
+            {
+                if (zamena == 0) error = errors(2, expression_copy, expression);
+                if (error == 21 || zamena != 0)
+                {
+                    stck.pop_back();
+                    stck.push_back(info);
+                }
+            }
+            else
+            {
+                if (!stck.empty())
+                {
+                    temp = stck.at(stck.size() - 1);
+                    stck.pop_back();
+
+                    while (priority(temp) >= priority(info))
+                    {
+                        rpn_expression.push_back(temp);
+
+                        if (!stck.empty())
+                        {
+                            temp = stck.at(stck.size() - 1);
+                            stck.pop_back();
+                        }
+                        else temp = "#";
+                    }
+
+                    if (priority(temp) < priority(info) && temp != "#") stck.push_back(temp);
+                }
+
+                stck.push_back(info);
+                type_prev = 2;
+            }
+        }
+        else if (close_bracket(info))
+        {
+            if (type_prev == 3)
+            {
+                if (bracket_type(info) == bracket_type(cur_bracket->open))
+                {
+                    if (zamena == 0) error = errors(5, expression_copy, expression);
+
+                    if (error == 5 || zamena != 0)
+                    {
+                        stck.pop_back();
+
+                        if (brackets_head != cur_bracket)
+                        {
+                            brackets_temp = brackets_head;
+                            while (brackets_temp->bracket != cur_bracket)
+                            {
+                                brackets_temp = brackets_temp->bracket;
+                            }
+
+                            delete cur_bracket;
+                            brackets_temp->bracket = NULL;
+                            cur_bracket = brackets_temp;
+                        }
+                        else
+                        {
+                            cur_bracket->open = "#";
+                            cur_bracket->element = NULL;
+                        }
+                    }
+                }
+                else
+                {
+                    if (zamena == 0) error = errors(4, expression_copy, expression);
+
+                    if (error == 4 || zamena != 0)
+                    {
+                        expression_copy.pop_back();
+                    }
+                }
+            }
+            else if (type_prev == 2)
+            {
+                if (!cur_bracket->op)
+                {
+                    if (zamena == 0) error = errors(6, expression_copy, expression);
+
+                    if (error == 6 || zamena != 0)
+                    {
+                        temp = stck.at(stck.size() - 1);
+                        stck.pop_back();
+
+                        if (!operation(temp)) stck.push_back(temp);
+
+                        type_prev = 4;
+                    }
+                }
+                else
+                {
+                    if (zamena == 0) error = errors(8, expression_copy, expression);
+
+                    if (error == 8 || zamena != 0)
+                    {
+                        stck.pop_back();
+                        expression_copy.pop_back();
+                        expression_copy.pop_back();
+
+                        if (brackets_head != cur_bracket)
+                        {
+                            brackets_temp = brackets_head;
+                            while (brackets_temp->bracket != cur_bracket)
+                            {
+                                brackets_temp = brackets_temp->bracket;
+                            }
+
+                            delete cur_bracket;
+                            brackets_temp->bracket = NULL;
+                            cur_bracket = brackets_temp;
+                        }
+                        else
+                        {
+                            cur_bracket->open = "#";
+                            cur_bracket->element = -1;
+                        }
+
+                        type_prev = 2;
+                    }
+                }
+            }
+
+            if (bracket_type(info) == bracket_type(cur_bracket->open) && error != 8)
+            {
+                temp = stck.at(stck.size() - 1);
+                stck.pop_back();
+
+                while (cur_bracket->open != temp)
+                {
+                    rpn_expression.push_back(temp);
+
+                    temp = stck.at(stck.size() - 1);
+                    stck.pop_back();
+                }
+
+                if (brackets_head != cur_bracket)
+                {
+                    brackets_temp = brackets_head;
+                    while (brackets_temp->bracket != cur_bracket)
+                    {
+                        brackets_temp = brackets_temp->bracket;
+                    }
+
+                    delete cur_bracket;
+                    brackets_temp->bracket = NULL;
+                    cur_bracket = brackets_temp;
+                }
+                else
+                {
+                    cur_bracket->open = "#";
+                    cur_bracket->element = NULL;
+                }
+
+                type_prev = 4;
+            }
+            else if (bracket_type(info) != bracket_type(cur_bracket->open) && error != 5 && error != 8)
+            {
+                brackets_temp = brackets_head;
+
+                while (bracket_type(brackets_temp->open) != bracket_type(info) && brackets_temp->bracket != NULL)
+                {
+                    brackets_temp = brackets_temp->bracket;
+                }
+
+                if (bracket_type(brackets_temp->open) == bracket_type(info))
+                {
+                    cur_bracket = brackets_temp;
+                    brackets_temp = brackets_temp->bracket;
+
+                    while (brackets_temp->bracket != NULL)
+                    {
+                        expression_copy.erase(expression_copy.begin() + brackets_temp->element - 1);
+                        expression_copy.insert(expression_copy.begin() + brackets_temp->element, "! " + brackets_temp->open + " !");
+                        brackets_temp = brackets_temp->bracket;
+                    }
+
+                    expression_copy.erase(expression_copy.begin() + brackets_temp->element - 1);
+                    expression_copy.insert(expression_copy.begin() + brackets_temp->element, "! " + brackets_temp->open + " !");
+
+                    if (zamena == 0) error = errors(3, expression_copy, expression);
+
+                    if (error == 3 || zamena != 0)
+                    {
+                        brackets_temp = cur_bracket->bracket;
+                        cur_bracket->bracket = NULL;
+                        del_bracket = brackets_temp;
+
+                        while (brackets_temp->bracket != NULL)
+                        {
+                            expression_copy.erase(expression_copy.begin() + brackets_temp->element - 1);
+                            brackets_temp = brackets_temp->bracket;
+                            delete del_bracket;
+                            brackets_temp->bracket = NULL;
+                            del_bracket = brackets_temp;
+                        }
+
+                        expression_copy.erase(expression_copy.begin() + brackets_temp->element - 1);
+                        delete del_bracket;
+
+                        temp = stck.at(stck.size() - 1);
+                        stck.pop_back();
+
+                        while (cur_bracket->open != temp)
+                        {
+                            if (bracket_type(temp) == 0) rpn_expression.push_back(temp);
+
+                            temp = stck.at(stck.size() - 1);
+                            stck.pop_back();
+                        }
+
+                        if (brackets_head != cur_bracket)
+                        {
+                            brackets_temp = brackets_head;
+                            while (brackets_temp->bracket != cur_bracket)
+                            {
+                                brackets_temp = brackets_temp->bracket;
+                            }
+
+                            delete cur_bracket;
+                            cur_bracket = brackets_temp;
+                        }
+                        else
+                        {
+                            cur_bracket->open = "#";
+                        }
+                    }
+                }
+                else
+                {
+                    if (zamena == 0) error = errors(4, expression_copy, expression);
+
+                    if (error == 4 || zamena != 0)
+                    {
+                        expression_copy.pop_back();
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (type_prev == 0 || type_prev == 2 || type_prev == 3)
+            {
+                if (cur_bracket->op) cur_bracket->op = false;
+                rpn_expression.push_back(info);
+            }
+            else if (type_prev == 4)
+            {
+                if (zamena == 0) error = errors(7, expression_copy, expression);
+
+                if (error == 71 || zamena != 0)
+                {
+                    stck.push_back("+");
+                    expression_copy.push_back("+");
+                    expression_copy.push_back(info);
+                }
+                else if (error == 72)
+                {
+                    stck.push_back("-");
+                    expression_copy.push_back("-");
+                    expression_copy.push_back(info);
+                }
+                else if (error == 73)
+                {
+                    stck.push_back("*");
+                    expression_copy.push_back("*");
+                    expression_copy.push_back(info);
+                }
+                else if (error == 74)
+                {
+                    stck.push_back("/");
+                    expression_copy.push_back("/");
+                    expression_copy.push_back(info);
+                }
+
+                rpn_expression.push_back(info);
+            }
+            type_prev = 1;
+        }
+    }
+
+    if (error >= 0)
+    {
+        while (!stck.empty())
+        {
+            temp = stck.at(stck.size() - 1);
+            stck.pop_back();
+
+            if (bracket_type(temp) == 0) rpn_expression.push_back(temp);
+        }
+
+        cout << endl;
+    }
+    return rpn_expression;
+}
+
+int main()
+{
+    system("chcp 1251");
+
+    vector<string> expression;
+    vector<string> rpn;
+
+    expression = vvod_file("Operations.txt");
+
+    show_vector(expression);
+
+    rpn = convert_to_rpn(expression, 1);
+
+    show_vector(rpn);
+    cout << endl;
+
+    return 0;
+}
